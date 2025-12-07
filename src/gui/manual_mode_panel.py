@@ -13,9 +13,9 @@
 import tkinter as tk
 from tkinter import ttk
 from typing import Optional, List, Dict, Any
-import asyncio
 
 from src.core.controller import CoreController, EventType, PlayMode
+from src.gui.async_helper import run_async
 from src.models.audio_track import AudioTrack
 from src.models.breakpoint import Breakpoint
 from src.gui.long_press import LongPressHandler
@@ -415,15 +415,20 @@ class ManualModePanel:
         """更新按钮状态"""
         state = self._controller.get_state()
         
+        # 播放/暂停按钮状态
+        # 暂停按钮在播放中或暂停状态都可用（用于暂停/继续切换）
         if state.is_playing and not state.is_paused:
+            # 正在播放：播放按钮禁用，暂停按钮可用
             self._play_btn.config(state=tk.DISABLED)
-            self._pause_btn.config(state=tk.NORMAL)
+            self._pause_btn.config(state=tk.NORMAL, text="暂停")
         elif state.is_paused:
+            # 已暂停：播放按钮可用，暂停按钮显示"继续"
             self._play_btn.config(state=tk.NORMAL)
-            self._pause_btn.config(state=tk.DISABLED)
+            self._pause_btn.config(state=tk.NORMAL, text="继续")
         else:
+            # 停止状态：播放按钮可用（如果有选中音频），暂停按钮禁用
             self._play_btn.config(state=tk.NORMAL if self._selected_audio else tk.DISABLED)
-            self._pause_btn.config(state=tk.DISABLED)
+            self._pause_btn.config(state=tk.DISABLED, text="暂停")
     
     def _update_next_hint(self) -> None:
         """更新下一条提示按钮状态"""
@@ -531,7 +536,7 @@ class ManualModePanel:
             # 应用入点和静音设置
             self._on_start_pos_change()
             self._on_silence_change()
-            asyncio.create_task(self._controller.play())
+            run_async(self._controller.play())
             self._next_hint_visible = False
     
     def _on_play_progress(self, progress: float) -> None:
@@ -546,9 +551,9 @@ class ManualModePanel:
         """暂停按钮回调"""
         state = self._controller.get_state()
         if state.is_paused:
-            asyncio.create_task(self._controller.resume())
+            run_async(self._controller.resume())
         else:
-            asyncio.create_task(self._controller.pause())
+            run_async(self._controller.pause())
     
     def _on_pause_progress(self, progress: float) -> None:
         """暂停按钮长按进度回调"""
@@ -560,11 +565,11 @@ class ManualModePanel:
     
     def _on_stop(self) -> None:
         """停止按钮回调"""
-        asyncio.create_task(self._controller.stop())
+        run_async(self._controller.stop())
     
     def _on_replay(self) -> None:
         """重播按钮回调"""
-        asyncio.create_task(self._controller.replay())
+        run_async(self._controller.replay())
         self._next_hint_visible = False
     
     def _on_next_hint(self) -> None:
@@ -604,7 +609,7 @@ class ManualModePanel:
         )
         if selection[0] < len(breakpoints):
             bp = breakpoints[selection[0]]
-            asyncio.create_task(
+            run_async(
                 self._controller.restore_breakpoint(self._selected_audio.id, bp.id)
             )
     

@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "name": "",
+  "created_at": "2025-12-06T22:58:56.765771",
+  "cues": [
+    {
+      "id": "cue_0cea5f9e",
+      "audio_id": "audio_8ee48036",
+      "start_time": 0.0,
+      "end_time": null,
+      "silence_before": 0.0,
+      "silence_after": 0.0,
+      "volume": 1.0,
+      "label": "Cue cue_0cea5f9e"
+    }
+  ],
+  "audio_files": [
+    {
+      "id": "audio_8ee48036",
+      "file_path": "G:/Projects/凌云/0-上课铃-纯音乐.mp3",
+      "duration": 150.0,
+      "title": "0-上课铃-纯音乐",
+      "track_type": "bgm"
+    }
+  ]
+}

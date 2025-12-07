@@ -314,8 +314,13 @@
     - 实时无延迟调节
     - _Requirements: 6.1-6.4_
 
-- [ ] 10. API 服务器实现
-  - [ ] 10.1 实现 HTTP API 路由
+- [x] 10. API 服务器实现
+
+
+
+
+  - [x] 10.1 实现 HTTP API 路由
+
     - 创建 `src/api/server.py`
     - 实现播放控制端点 (play, pause, stop, next, seek)
     - 实现音量控制端点
@@ -324,78 +329,138 @@
     - 实现断点管理端点
     - 实现音频上传端点
     - _Requirements: 14.1-14.7, 15.1-15.5_
-  - [ ] 10.2 实现 WebSocket 服务
+
+
+  - [x] 10.2 实现 WebSocket 服务
     - 创建 `src/api/websocket.py`
     - 实现客户端连接管理
     - 实现状态变化广播
+
     - _Requirements: 17.4_
-  - [ ] 10.3 编写属性测试：API 状态查询一致性
+
+  - [x] 10.3 编写属性测试：API 状态查询一致性
 
     - **Property 26: API 状态查询一致性**
+
     - **Validates: Requirements 14.5**
-  - [ ] 10.4 编写属性测试：音频列表一致性
+  - [x] 10.4 编写属性测试：音频列表一致性
+
 
     - **Property 27: 音频列表一致性**
     - **Validates: Requirements 15.2**
 
-- [ ] 11. Web UI 实现
-  - [ ] 11.1 实现静态文件服务
+- [x] 11. Web UI 实现
+
+
+
+
+  - [x] 11.1 实现静态文件服务
+
     - 创建 `src/api/static/` 目录
     - 配置 aiohttp 静态文件路由
     - _Requirements: 17.1_
-  - [ ] 11.2 实现响应式 Web UI
+
+  - [x] 11.2 实现响应式 Web UI
     - 创建 `src/api/static/index.html`
     - 创建 `src/api/static/style.css` - 移动端适配
     - 创建 `src/api/static/app.js` - WebSocket 通信和 UI 控制
     - 实现与桌面客户端相同的核心功能
     - _Requirements: 17.1-17.7_
-  - [ ] 11.3 实现二维码显示窗口
+
+  - [x] 11.3 实现二维码显示窗口
+
+
     - 创建 `src/gui/qrcode_window.py`
     - 生成 Web UI URL 二维码
     - 独立窗口显示，不干扰主界面
     - 控制台打印 URL
     - _Requirements: 17.8-17.10_
 
-- [ ] 12. Tkinter 远程客户端实现
-  - [ ] 12.1 实现远程客户端主窗口
+
+
+- [x] 12. Tkinter 远程客户端实现
+
+
+
+  - [x] 12.1 实现远程客户端主窗口
+
+
     - 创建 `src/client/remote_client.py`
     - 复用本地 GUI 组件
     - 添加 API 地址配置组件
     - _Requirements: 16.1-16.2_
-  - [ ] 12.2 实现 API 通信层
+  - [x] 12.2 实现 API 通信层
+
+
     - 创建 `src/client/api_client.py`
     - 实现所有 API 调用封装
     - 实现 WebSocket 状态同步
     - 实现断线重连
+
     - _Requirements: 16.3-16.6_
-  - [ ] 12.3 实现文件上传功能
+  - [x] 12.3 实现文件上传功能
+
+
     - 实现音频文件选择和上传
     - 显示上传进度
     - _Requirements: 16.5_
 
 - [ ] 13. Checkpoint - 确保所有测试通过
+
+
+
+
   - 确保所有测试通过，如有问题请询问用户
 
-- [ ] 14. 配置工具实现
-  - [ ] 14.1 实现配置工具主窗口
+
+
+- [x] 14. 配置工具实现
+
+
+
+
+  - [x] 14.1 实现配置工具主窗口
+
+
     - 创建 `src/tools/config_editor.py`
     - Cue 列表可视化编辑
     - 音频文件添加和管理
     - _Requirements: 9.1-9.4_
-  - [ ] 14.2 实现 Cue 编辑功能
+
+
+  - [x] 14.2 实现 Cue 编辑功能
+
+
+
+
+
     - 入点、出点、静音间隔设置
     - Cue 顺序调整（上移/下移按钮）
     - JSON 导入/导出
     - _Requirements: 9.2-9.4_
 
-- [ ] 15. 应用入口和集成
-  - [ ] 15.1 实现主程序入口
+- [x] 15. 应用入口和集成
+
+
+
+
+
+
+  - [x] 15.1 实现主程序入口
+
     - 创建 `src/main.py`
     - 初始化所有组件
     - 启动 GUI 和 API 服务器
     - 加载上次保存的配置和断点
     - _Requirements: 8.4, 14.1_
-  - [ ] 15.2 实现配置工具入口
+
+
+  - [x] 15.2 实现配置工具入口
+
+
+
+
+
     - 创建 `src/config_tool.py`
     - 独立启动配置编辑器
     - _Requirements: 9.1_

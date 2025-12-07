@@ -105,20 +105,28 @@ class BreakpointManager:
         ]
         return len(self._breakpoints[audio_id]) < original_len
     
-    def clear_audio_breakpoints(self, audio_id: str) -> None:
-        """清除指定音频的所有断点
+    def clear_audio_breakpoints(self, audio_id: str, include_auto_saved: bool = False) -> None:
+        """清除指定音频的断点
         
         Args:
             audio_id: 音频 ID
+            include_auto_saved: 是否包括自动保存的断点，默认不清除自动保存的断点
         """
         if audio_id in self._breakpoints:
-            self._breakpoints[audio_id] = []
+            if include_auto_saved:
+                self._breakpoints[audio_id] = []
+            else:
+                # 保留自动保存的断点
+                self._breakpoints[audio_id] = [
+                    bp for bp in self._breakpoints[audio_id] if bp.auto_saved
+                ]
     
-    def clear_selected(self, bp_ids: List[str]) -> int:
+    def clear_selected(self, bp_ids: List[str], include_auto_saved: bool = True) -> int:
         """批量删除选中的断点
         
         Args:
             bp_ids: 要删除的断点 ID 列表
+            include_auto_saved: 是否包括自动保存的断点，默认包括（因为是用户明确选择的）
             
         Returns:
             实际删除的断点数量
@@ -128,12 +136,52 @@ class BreakpointManager:
         
         for audio_id in self._breakpoints:
             original_len = len(self._breakpoints[audio_id])
-            self._breakpoints[audio_id] = [
-                bp for bp in self._breakpoints[audio_id] if bp.id not in bp_id_set
-            ]
+            if include_auto_saved:
+                self._breakpoints[audio_id] = [
+                    bp for bp in self._breakpoints[audio_id] if bp.id not in bp_id_set
+                ]
+            else:
+                self._breakpoints[audio_id] = [
+                    bp for bp in self._breakpoints[audio_id] 
+                    if bp.id not in bp_id_set or bp.auto_saved
+                ]
             deleted_count += original_len - len(self._breakpoints[audio_id])
         
         return deleted_count
+    
+    def clear_auto_saved_breakpoints(self, audio_id: str) -> int:
+        """清除指定音频的自动保存断点
+        
+        Args:
+            audio_id: 音频 ID
+            
+        Returns:
+            删除的断点数量
+        """
+        if audio_id not in self._breakpoints:
+            return 0
+        
+        original_len = len(self._breakpoints[audio_id])
+        self._breakpoints[audio_id] = [
+            bp for bp in self._breakpoints[audio_id] if not bp.auto_saved
+        ]
+        return original_len - len(self._breakpoints[audio_id])
+    
+    def get_latest_auto_saved_breakpoint(self, audio_id: str) -> Optional[Breakpoint]:
+        """获取指定音频最新的自动保存断点
+        
+        Args:
+            audio_id: 音频 ID
+            
+        Returns:
+            最新的自动保存断点，不存在则返回 None
+        """
+        auto_saved = [
+            bp for bp in self._breakpoints.get(audio_id, []) if bp.auto_saved
+        ]
+        if not auto_saved:
+            return None
+        return max(auto_saved, key=lambda bp: bp.created_at)
 
     
     def get_all_breakpoint_ids(self) -> List[str]:

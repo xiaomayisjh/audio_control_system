@@ -103,6 +103,10 @@ class CoreController:
         self._manual_start_pos: float = 0.0
         self._manual_silence_before: float = 0.0
         
+        # 暂停恢复状态
+        self._paused_audio_id: Optional[str] = None
+        self._paused_position: float = 0.0
+        
         # 操作锁和优先级
         self._operation_lock = threading.Lock()
         self._local_priority: bool = True
@@ -276,9 +280,22 @@ class CoreController:
             # 记录当前位置
             self._current_position = self._get_current_position()
             
+            # 自动保存断点（用于恢复）
+            if self._current_audio_id:
+                self._breakpoint_manager.save_breakpoint(
+                    self._current_audio_id,
+                    self._current_position,
+                    label="暂停自动保存",
+                    auto_saved=True
+                )
+            
             # 暂停音频
             self._audio_engine.pause_bgm()
             self._is_paused = True
+            
+            # 记录暂停位置用于恢复
+            self._paused_audio_id = self._current_audio_id
+            self._paused_position = self._current_position
             
             self._notify_listeners(EventType.PLAYBACK_PAUSED, {
                 "position": self._current_position
@@ -303,11 +320,36 @@ class CoreController:
             if not self._is_paused:
                 return False
             
-            # 继续播放
-            self._audio_engine.resume_bgm()
+            # 获取恢复位置
+            resume_position = self._paused_position if self._paused_position > 0 else self._current_position
+            
+            # 获取当前音频（优先使用手动模式的音频）
+            audio = None
+            if self._mode == PlayMode.MANUAL and self._manual_audio:
+                audio = self._manual_audio
+            elif self._paused_audio_id:
+                # 先尝试从 cue_manager 获取
+                audio = self._cue_manager.get_audio_file(self._paused_audio_id)
+                # 如果获取不到，检查是否是手动模式的音频
+                if audio is None and self._manual_audio and self._manual_audio.id == self._paused_audio_id:
+                    audio = self._manual_audio
+            elif self._mode == PlayMode.AUTO:
+                cue = self._cue_manager.get_current_cue()
+                if cue:
+                    audio = self._cue_manager.get_audio_file(cue.audio_id)
+            
+            if audio is None:
+                return False
+            
+            # 直接从保存的位置重新播放（更可靠）
+            # pygame 的 unpause 在某些情况下不可靠
+            self._audio_engine.play_bgm(audio, resume_position)
+            
             self._is_paused = False
+            self._is_playing = True
             self._playback_start_time = time.time()
-            self._playback_start_position = self._current_position
+            self._playback_start_position = resume_position
+            self._current_position = resume_position
             
             self._notify_listeners(EventType.PLAYBACK_STARTED, {
                 "position": self._current_position,
@@ -330,20 +372,32 @@ class CoreController:
             return False
         
         with self._operation_lock:
+            # 保存当前音频 ID 用于事件通知
+            stopped_audio_id = self._current_audio_id
             position = self._audio_engine.stop_bgm()
+            
+            # 重置所有播放状态
             self._is_playing = False
             self._is_paused = False
             self._current_position = 0.0
             self._playback_start_time = None
+            self._playback_start_position = 0.0
             self._cue_manager.is_playing = False
+            
+            # 清除暂停恢复状态
+            self._paused_audio_id = None
+            self._paused_position = 0.0
             
             # 停止静音间隔
             if self._in_silence:
                 self._in_silence = False
                 self._silence_remaining = 0.0
+                self._silence_start_time = None
+                self._silence_duration = 0.0
             
             self._notify_listeners(EventType.PLAYBACK_STOPPED, {
-                "position": position
+                "position": position,
+                "audio_id": stopped_audio_id
             })
             
             return True
@@ -552,9 +606,9 @@ class CoreController:
         """设置 BGM 音量
         
         Args:
-            volume: 音量值 (0.0 - 1.0)
+            volume: 音量值 (0.0 - 3.0，即 0%-300%)
         """
-        self._bgm_volume = max(0.0, min(1.0, volume))
+        self._bgm_volume = max(0.0, min(3.0, volume))
         self._audio_engine.set_bgm_volume(self._bgm_volume)
         self._notify_listeners(EventType.VOLUME_CHANGED, {
             "type": "bgm",
@@ -569,9 +623,9 @@ class CoreController:
         """设置音效音量
         
         Args:
-            volume: 音量值 (0.0 - 1.0)
+            volume: 音量值 (0.0 - 3.0，即 0%-300%)
         """
-        self._sfx_volume = max(0.0, min(1.0, volume))
+        self._sfx_volume = max(0.0, min(3.0, volume))
         self._audio_engine.set_sfx_volume(self._sfx_volume)
         self._notify_listeners(EventType.VOLUME_CHANGED, {
             "type": "sfx",
@@ -585,7 +639,7 @@ class CoreController:
     # ==================== 模式切换 ====================
     
     async def switch_mode(self, mode: PlayMode) -> bool:
-        """切换播放模式
+        """切换播放模式（无缝切换，保持播放状态）
         
         Args:
             mode: 目标模式
@@ -597,36 +651,53 @@ class CoreController:
             if self._mode == mode:
                 return True
             
-            # 记录当前位置
+            # 记录当前状态
             current_pos = self._get_current_position()
             was_playing = self._is_playing and not self._is_paused
+            was_paused = self._is_paused
+            current_audio = None
+            
+            # 获取当前播放的音频
+            if self._mode == PlayMode.AUTO:
+                cue = self._cue_manager.get_current_cue()
+                if cue:
+                    current_audio = self._cue_manager.get_audio_file(cue.audio_id)
+            else:
+                current_audio = self._manual_audio
             
             # 切换模式
             old_mode = self._mode
             self._mode = mode
             
-            # 同步状态
+            # 同步状态 - 无缝切换
             if mode == PlayMode.MANUAL:
                 # 从自动切换到手动
-                cue = self._cue_manager.get_current_cue()
-                if cue:
-                    audio = self._cue_manager.get_audio_file(cue.audio_id)
-                    if audio:
-                        self._manual_audio = audio
-                        self._manual_start_pos = current_pos
+                if current_audio:
+                    self._manual_audio = current_audio
+                    self._manual_start_pos = current_pos if was_playing or was_paused else 0.0
             else:
                 # 从手动切换到自动
                 # 尝试找到匹配的 Cue
                 if self._manual_audio:
+                    found = False
                     for i, cue in enumerate(self._cue_manager.cue_list):
                         if cue.audio_id == self._manual_audio.id:
                             self._cue_manager.set_index(i)
+                            found = True
                             break
+                    if not found and self._cue_manager.cue_list:
+                        # 如果没找到匹配的 Cue，保持当前索引
+                        pass
+            
+            # 保持播放/暂停状态不变
+            # 音频引擎不需要重新操作，因为音频本身没有变化
             
             self._notify_listeners(EventType.MODE_CHANGED, {
                 "old_mode": old_mode.value,
                 "new_mode": mode.value,
-                "position": current_pos
+                "position": current_pos,
+                "was_playing": was_playing,
+                "was_paused": was_paused
             })
             
             return True
@@ -639,6 +710,16 @@ class CoreController:
         Args:
             audio: 音频轨道
         """
+        # 如果正在播放其他音频，先保存断点
+        if self._is_playing and self._current_audio_id and self._current_audio_id != audio.id:
+            current_pos = self._get_current_position()
+            self._breakpoint_manager.save_breakpoint(
+                self._current_audio_id,
+                current_pos,
+                label="切换音频自动保存",
+                auto_saved=True
+            )
+        
         self._manual_audio = audio
         self._manual_start_pos = 0.0
         self._manual_silence_before = 0.0
@@ -861,6 +942,12 @@ class CoreController:
         Returns:
             PlaybackState 对象
         """
+        # 获取当前音频时长
+        duration = 0.0
+        current_audio = self.get_current_audio()
+        if current_audio:
+            duration = current_audio.duration
+        
         return PlaybackState(
             mode=self._mode.value,
             is_playing=self._is_playing,
@@ -871,7 +958,8 @@ class CoreController:
             bgm_volume=self._bgm_volume,
             sfx_volume=self._sfx_volume,
             in_silence=self._in_silence,
-            silence_remaining=self._silence_remaining
+            silence_remaining=self._silence_remaining,
+            duration=duration
         )
     
     def get_state_dict(self) -> dict:
@@ -1010,11 +1098,18 @@ class CoreController:
     
     def _on_bgm_end(self) -> None:
         """BGM 播放结束回调"""
+        # 保存完成的音频 ID
+        completed_audio_id = self._current_audio_id
+        
+        # 重置播放状态
         self._is_playing = False
         self._is_paused = False
+        self._playback_start_time = None
+        self._paused_audio_id = None
+        self._paused_position = 0.0
         
         self._notify_listeners(EventType.PLAYBACK_COMPLETED, {
-            "audio_id": self._current_audio_id
+            "audio_id": completed_audio_id
         })
         
         # 自动模式下处理后置静音和下一个 Cue
@@ -1022,10 +1117,18 @@ class CoreController:
             cue = self._cue_manager.get_current_cue()
             if cue and cue.silence_after > 0:
                 # 启动后置静音（异步处理）
-                asyncio.create_task(self._handle_auto_next(cue.silence_after))
+                try:
+                    asyncio.create_task(self._handle_auto_next(cue.silence_after))
+                except RuntimeError:
+                    # 如果没有事件循环，忽略
+                    pass
             else:
                 # 直接播放下一个
-                asyncio.create_task(self._auto_advance())
+                try:
+                    asyncio.create_task(self._auto_advance())
+                except RuntimeError:
+                    # 如果没有事件循环，忽略
+                    pass
     
     async def _handle_auto_next(self, silence_duration: float) -> None:
         """处理自动模式的下一个 Cue（包含静音间隔）

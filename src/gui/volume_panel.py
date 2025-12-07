@@ -112,12 +112,12 @@ class VolumePanel:
         )
         self._bgm_value_label.pack(side=tk.RIGHT)
         
-        # 滑块
+        # 滑块 (0-300%)
         self._bgm_volume_var = tk.DoubleVar(value=100)
         self._bgm_slider = ttk.Scale(
             bgm_frame,
             from_=0,
-            to=100,
+            to=300,
             orient=tk.HORIZONTAL,
             variable=self._bgm_volume_var,
             command=self._on_bgm_volume_change,
@@ -125,14 +125,26 @@ class VolumePanel:
         )
         self._bgm_slider.pack(fill=tk.X, pady=(5, 0))
         
+        # 快捷按钮行
+        btn_frame = ttk.Frame(bgm_frame)
+        btn_frame.pack(fill=tk.X, pady=(5, 0))
+        
         # 静音按钮
         self._bgm_mute_btn = ttk.Button(
-            bgm_frame,
+            btn_frame,
             text="🔊",
             width=3,
             command=self._on_bgm_mute_toggle
         )
-        self._bgm_mute_btn.pack(pady=(5, 0))
+        self._bgm_mute_btn.pack(side=tk.LEFT)
+        
+        # 100% 快捷按钮
+        ttk.Button(
+            btn_frame,
+            text="100%",
+            width=5,
+            command=lambda: self._set_bgm_volume_quick(100)
+        ).pack(side=tk.LEFT, padx=2)
     
     def _create_sfx_control(self) -> None:
         """创建音效音量控制"""
@@ -157,12 +169,12 @@ class VolumePanel:
         )
         self._sfx_value_label.pack(side=tk.RIGHT)
         
-        # 滑块
+        # 滑块 (0-300%)
         self._sfx_volume_var = tk.DoubleVar(value=100)
         self._sfx_slider = ttk.Scale(
             sfx_frame,
             from_=0,
-            to=100,
+            to=300,
             orient=tk.HORIZONTAL,
             variable=self._sfx_volume_var,
             command=self._on_sfx_volume_change,
@@ -170,14 +182,26 @@ class VolumePanel:
         )
         self._sfx_slider.pack(fill=tk.X, pady=(5, 0))
         
+        # 快捷按钮行
+        btn_frame = ttk.Frame(sfx_frame)
+        btn_frame.pack(fill=tk.X, pady=(5, 0))
+        
         # 静音按钮
         self._sfx_mute_btn = ttk.Button(
-            sfx_frame,
+            btn_frame,
             text="🔊",
             width=3,
             command=self._on_sfx_mute_toggle
         )
-        self._sfx_mute_btn.pack(pady=(5, 0))
+        self._sfx_mute_btn.pack(side=tk.LEFT)
+        
+        # 100% 快捷按钮
+        ttk.Button(
+            btn_frame,
+            text="100%",
+            width=5,
+            command=lambda: self._set_sfx_volume_quick(100)
+        ).pack(side=tk.LEFT, padx=2)
     
     def _register_listeners(self) -> None:
         """注册控制器事件监听"""
@@ -201,7 +225,7 @@ class VolumePanel:
         Args:
             value: 滑块值（字符串）
         """
-        volume = float(value) / 100.0
+        volume = float(value) / 100.0  # 0-3.0 范围
         self._controller.set_bgm_volume(volume)
         self._update_bgm_label()
         
@@ -217,7 +241,7 @@ class VolumePanel:
         Args:
             value: 滑块值（字符串）
         """
-        volume = float(value) / 100.0
+        volume = float(value) / 100.0  # 0-3.0 范围
         self._controller.set_sfx_volume(volume)
         self._update_sfx_label()
         
@@ -225,6 +249,16 @@ class VolumePanel:
         if self._sfx_muted and volume > 0:
             self._sfx_muted = False
             self._update_sfx_mute_button()
+    
+    def _set_bgm_volume_quick(self, percent: int) -> None:
+        """快捷设置 BGM 音量"""
+        self._bgm_volume_var.set(percent)
+        self._on_bgm_volume_change(str(percent))
+    
+    def _set_sfx_volume_quick(self, percent: int) -> None:
+        """快捷设置音效音量"""
+        self._sfx_volume_var.set(percent)
+        self._on_sfx_volume_change(str(percent))
     
     def _on_bgm_mute_toggle(self) -> None:
         """BGM 静音切换"""

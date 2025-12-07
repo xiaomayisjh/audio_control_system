@@ -17,6 +17,7 @@ class PlaybackState:
     sfx_volume: float
     in_silence: bool  # 是否在静音间隔中
     silence_remaining: float
+    duration: float = 0.0  # 当前音频总时长
 
     def to_dict(self) -> dict:
         """转换为字典"""
@@ -39,7 +40,8 @@ class PlaybackState:
             bgm_volume=data.get("bgm_volume", 1.0),
             sfx_volume=data.get("sfx_volume", 1.0),
             in_silence=data.get("in_silence", False),
-            silence_remaining=data.get("silence_remaining", 0.0)
+            silence_remaining=data.get("silence_remaining", 0.0),
+            duration=data.get("duration", 0.0)
         )
 
     @classmethod

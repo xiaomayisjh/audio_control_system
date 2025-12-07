@@ -5,15 +5,17 @@
 - 垂直布局，区分自动/手动模式区域
 - 模式切换 Tab
 - 关闭确认对话框
+- 配置文件导入/导出菜单
 
 **Requirements: 11.1, 11.6**
 """
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from typing import Optional, Callable, Dict, Any
-import asyncio
+from pathlib import Path
 
 from src.core.controller import CoreController, PlayMode, EventType
+from src.gui.async_helper import run_async
 
 
 class MainWindow:
@@ -66,6 +68,9 @@ class MainWindow:
         # 状态
         self._is_running = False
         self._close_confirmed = False
+        
+        # 当前配置文件路径
+        self._current_config_file: Optional[str] = None
     
     def create(self) -> tk.Tk:
         """
@@ -83,6 +88,9 @@ class MainWindow:
         
         # 配置样式
         self._configure_styles()
+        
+        # 创建菜单栏
+        self._create_menu()
         
         # 创建主布局
         self._create_layout()
@@ -116,6 +124,169 @@ class MainWindow:
         style.configure("TButton", font=("微软雅黑", 10), padding=[10, 5])
         style.configure("Play.TButton", font=("微软雅黑", 12, "bold"))
         style.configure("Danger.TButton", foreground="red")
+    
+    def _create_menu(self) -> None:
+        """创建菜单栏"""
+        if not self._root:
+            return
+        
+        menubar = tk.Menu(self._root)
+        self._root.config(menu=menubar)
+        
+        # 文件菜单
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="文件", menu=file_menu)
+        file_menu.add_command(label="导入配置...", command=self._import_config, accelerator="Ctrl+O")
+        file_menu.add_command(label="导出配置...", command=self._export_config, accelerator="Ctrl+Shift+S")
+        file_menu.add_separator()
+        file_menu.add_command(label="打开配置编辑器", command=self._open_config_editor)
+        file_menu.add_separator()
+        file_menu.add_command(label="退出", command=self._on_close_request, accelerator="Alt+F4")
+        
+        # 绑定快捷键
+        self._root.bind("<Control-o>", lambda e: self._import_config())
+        self._root.bind("<Control-Shift-S>", lambda e: self._export_config())
+    
+    def _import_config(self) -> None:
+        """导入配置文件"""
+        if not self._root or not self._controller:
+            return
+        
+        filepath = filedialog.askopenfilename(
+            parent=self._root,
+            title="导入配置文件",
+            filetypes=[("JSON 文件", "*.json"), ("所有文件", "*.*")],
+            initialdir=str(Path("config"))
+        )
+        
+        if filepath:
+            try:
+                self._controller.cue_manager.load_config(filepath)
+                self._current_config_file = filepath
+                
+                # 更新窗口标题
+                filename = Path(filepath).name
+                self._root.title(f"{self.WINDOW_TITLE} - {filename}")
+                
+                # 刷新面板显示
+                self._refresh_panels()
+                
+                messagebox.showinfo(
+                    "导入成功",
+                    f"已成功导入配置文件:\n{filename}",
+                    parent=self._root
+                )
+            except Exception as e:
+                messagebox.showerror(
+                    "导入失败",
+                    f"无法导入配置文件:\n{e}",
+                    parent=self._root
+                )
+    
+    def _export_config(self) -> None:
+        """导出配置文件"""
+        if not self._root or not self._controller:
+            return
+        
+        # 默认文件名
+        default_name = "cue_config.json"
+        if self._current_config_file:
+            default_name = Path(self._current_config_file).name
+        
+        filepath = filedialog.asksaveasfilename(
+            parent=self._root,
+            title="导出配置文件",
+            defaultextension=".json",
+            filetypes=[("JSON 文件", "*.json"), ("所有文件", "*.*")],
+            initialfile=default_name,
+            initialdir=str(Path("config"))
+        )
+        
+        if filepath:
+            try:
+                self._controller.cue_manager.save_config(filepath)
+                self._current_config_file = filepath
+                
+                # 更新窗口标题
+                filename = Path(filepath).name
+                self._root.title(f"{self.WINDOW_TITLE} - {filename}")
+                
+                messagebox.showinfo(
+                    "导出成功",
+                    f"已成功导出配置文件:\n{filename}",
+                    parent=self._root
+                )
+            except Exception as e:
+                messagebox.showerror(
+                    "导出失败",
+                    f"无法导出配置文件:\n{e}",
+                    parent=self._root
+                )
+    
+    def _open_config_editor(self) -> None:
+        """打开配置编辑器"""
+        try:
+            from src.tools.config_editor import ConfigEditor
+            
+            # 创建配置编辑器窗口
+            editor = ConfigEditor()
+            
+            # 如果当前有配置文件，加载它
+            if self._current_config_file:
+                try:
+                    editor.cue_manager.load_config(self._current_config_file)
+                    editor.current_file = self._current_config_file
+                    editor._refresh_audio_list()
+                    editor._refresh_cue_list()
+                    editor._update_title()
+                except Exception:
+                    pass
+            
+            editor.mainloop()
+            
+            # 编辑器关闭后，询问是否重新加载配置
+            if self._current_config_file and self._root:
+                result = messagebox.askyesno(
+                    "重新加载配置",
+                    "配置编辑器已关闭。\n是否重新加载配置文件？",
+                    parent=self._root
+                )
+                if result:
+                    try:
+                        self._controller.cue_manager.load_config(self._current_config_file)
+                        self._refresh_panels()
+                    except Exception as e:
+                        messagebox.showerror(
+                            "加载失败",
+                            f"无法重新加载配置:\n{e}",
+                            parent=self._root
+                        )
+        except Exception as e:
+            messagebox.showerror(
+                "错误",
+                f"无法打开配置编辑器:\n{e}",
+                parent=self._root
+            )
+    
+    def _refresh_panels(self) -> None:
+        """刷新所有面板显示"""
+        # 刷新自动模式面板
+        if self._auto_mode_panel and hasattr(self._auto_mode_panel, 'refresh'):
+            self._auto_mode_panel.refresh()
+        elif self._auto_mode_panel and hasattr(self._auto_mode_panel, '_refresh_cue_list'):
+            self._auto_mode_panel._refresh_cue_list()
+        
+        # 刷新手动模式面板
+        if self._manual_mode_panel and hasattr(self._manual_mode_panel, 'refresh'):
+            self._manual_mode_panel.refresh()
+        elif self._manual_mode_panel and hasattr(self._manual_mode_panel, '_refresh_audio_list'):
+            self._manual_mode_panel._refresh_audio_list()
+        
+        # 刷新音效面板
+        if self._sfx_panel and hasattr(self._sfx_panel, 'refresh'):
+            self._sfx_panel.refresh()
+        elif self._sfx_panel and hasattr(self._sfx_panel, '_refresh_sfx_buttons'):
+            self._sfx_panel._refresh_sfx_buttons()
     
     def _create_layout(self) -> None:
         """创建主布局"""
@@ -218,9 +389,9 @@ class MainWindow:
         
         # 切换控制器模式
         if current_tab == 0:
-            asyncio.create_task(self._controller.switch_mode(PlayMode.AUTO))
+            run_async(self._controller.switch_mode(PlayMode.AUTO))
         else:
-            asyncio.create_task(self._controller.switch_mode(PlayMode.MANUAL))
+            run_async(self._controller.switch_mode(PlayMode.MANUAL))
     
     def _on_mode_changed(self, event_type: EventType, data: Dict[str, Any]) -> None:
         """
@@ -267,7 +438,7 @@ class MainWindow:
         """关闭窗口"""
         # 停止控制器
         if self._controller:
-            asyncio.create_task(self._controller.stop())
+            run_async(self._controller.stop())
         
         # 执行关闭回调
         if self._on_close_callback:

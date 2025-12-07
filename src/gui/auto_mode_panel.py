@@ -12,9 +12,9 @@
 import tkinter as tk
 from tkinter import ttk
 from typing import Optional, List, Dict, Any, Callable
-import asyncio
 
 from src.core.controller import CoreController, EventType, PlayMode
+from src.gui.async_helper import run_async
 from src.core.cue_manager import CueManager
 from src.core.breakpoint_manager import BreakpointManager
 from src.models.cue import Cue
@@ -404,15 +404,19 @@ class AutoModePanel:
         state = self._controller.get_state()
         
         # 播放/暂停按钮状态
+        # 暂停按钮在播放中或暂停状态都可用（用于暂停/继续切换）
         if state.is_playing and not state.is_paused:
+            # 正在播放：播放按钮禁用，暂停按钮可用
             self._play_btn.config(state=tk.DISABLED)
-            self._pause_btn.config(state=tk.NORMAL)
+            self._pause_btn.config(state=tk.NORMAL, text="暂停")
         elif state.is_paused:
+            # 已暂停：播放按钮可用，暂停按钮显示"继续"
             self._play_btn.config(state=tk.NORMAL)
-            self._pause_btn.config(state=tk.DISABLED)
+            self._pause_btn.config(state=tk.NORMAL, text="继续")
         else:
+            # 停止状态：播放按钮可用，暂停按钮禁用
             self._play_btn.config(state=tk.NORMAL)
-            self._pause_btn.config(state=tk.DISABLED)
+            self._pause_btn.config(state=tk.DISABLED, text="暂停")
     
     def _refresh_cue_list(self) -> None:
         """刷新 Cue 列表"""
@@ -481,7 +485,7 @@ class AutoModePanel:
     
     def _on_play(self) -> None:
         """播放按钮回调"""
-        asyncio.create_task(self._controller.play())
+        run_async(self._controller.play())
     
     def _on_play_progress(self, progress: float) -> None:
         """播放按钮长按进度回调"""
@@ -496,9 +500,9 @@ class AutoModePanel:
         """暂停按钮回调"""
         state = self._controller.get_state()
         if state.is_paused:
-            asyncio.create_task(self._controller.resume())
+            run_async(self._controller.resume())
         else:
-            asyncio.create_task(self._controller.pause())
+            run_async(self._controller.pause())
     
     def _on_pause_progress(self, progress: float) -> None:
         """暂停按钮长按进度回调"""
@@ -510,11 +514,11 @@ class AutoModePanel:
     
     def _on_stop(self) -> None:
         """停止按钮回调"""
-        asyncio.create_task(self._controller.stop())
+        run_async(self._controller.stop())
     
     def _on_next(self) -> None:
         """下一个按钮回调"""
-        asyncio.create_task(self._controller.next_cue())
+        run_async(self._controller.next_cue())
     
     def _on_cue_double_click(self, event: tk.Event) -> None:
         """Cue 列表双击事件"""
@@ -522,7 +526,7 @@ class AutoModePanel:
         if selection:
             index = selection[0]
             self._controller.cue_manager.set_index(index)
-            asyncio.create_task(self._controller.play())
+            run_async(self._controller.play())
     
     def _on_save_breakpoint(self) -> None:
         """保存断点"""
@@ -550,7 +554,7 @@ class AutoModePanel:
         breakpoints = self._controller.breakpoint_manager.get_breakpoints(current_audio_id)
         if selection[0] < len(breakpoints):
             bp = breakpoints[selection[0]]
-            asyncio.create_task(
+            run_async(
                 self._controller.restore_breakpoint(current_audio_id, bp.id)
             )
     

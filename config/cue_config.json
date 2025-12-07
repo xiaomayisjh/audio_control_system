@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "name": "",
+  "created_at": "2025-12-07T11:11:52.271181",
+  "cues": [
+    {
+      "id": "cue_7f604709",
+      "audio_id": "audio_f981c702",
+      "start_time": 0.0,
+      "end_time": null,
+      "silence_before": 0.0,
+      "silence_after": 10.0,
+      "volume": 1.0,
+      "label": "Cue cue_7f604709"
+    },
+    {
+      "id": "cue_543b0a0d",
+      "audio_id": "audio_7ac4119e",
+      "start_time": 0.0,
+      "end_time": null,
+      "silence_before": 0.0,
+      "silence_after": 0.0,
+      "volume": 1.0,
+      "label": "Cue cue_543b0a0d"
+    },
+    {
+      "id": "cue_6da6ef42",
+      "audio_id": "audio_525ab23b",
+      "start_time": 0.0,
+      "end_time": null,
+      "silence_before": 0.0,
+      "silence_after": 5.0,
+      "volume": 1.0,
+      "label": "Cue cue_6da6ef42"
+    },
+    {
+      "id": "cue_abc0afdc",
+      "audio_id": "audio_b5624c9c",
+      "start_time": 0.0,
+      "end_time": null,
+      "silence_before": 0.0,
+      "silence_after": 2.0,
+      "volume": 1.0,
+      "label": "Cue cue_abc0afdc"
+    },
+    {
+      "id": "cue_0983b59e",
+      "audio_id": "audio_687112fe",
+      "start_time": 0.0,
+      "end_time": null,
+      "silence_before": 0.0,
+      "silence_after": 40.0,
+      "volume": 1.0,
+      "label": "Cue cue_0983b59e"
+    },
+    {
+      "id": "cue_e6adbdf1",
+      "audio_id": "audio_6ab758d6",
+      "start_time": 0.0,
+      "end_time": null,
+      "silence_before": 0.0,
+      "silence_after": 0.0,
+      "volume": 1.0,
+      "label": "Cue cue_e6adbdf1"
+    }
+  ],
+  "audio_files": [
+    {
+      "id": "audio_f981c702",
+      "file_path": "G:/Projects/凌云/0-上课铃-纯音乐.mp3",
+      "duration": 17.9,
+      "title": "0-上课铃-纯音乐",
+      "track_type": "bgm"
+    },
+    {
+      "id": "audio_7ac4119e",
+      "file_path": "G:/Projects/凌云/1-The Last Emperor (Theme)-坂本龍一.mp3",
+      "duration": 60.0,
+      "title": "1-The Last Emperor (Theme)-坂本龍一",
+      "track_type": "bgm"
+    },
+    {
+      "id": "audio_525ab23b",
+      "file_path": "G:/Projects/凌云/2-The Battle (From Gladiator Soundtrack) - Gavin Greenaway.m4a",
+      "duration": 90.0,
+      "title": "2-The Battle (From Gladiator Soundtrack) - Gavin Greenaway",
+      "track_type": "bgm"
+    },
+    {
+      "id": "audio_b5624c9c",
+      "file_path": "G:/Projects/凌云/3-Spiegel im Spiegel - Arvo Pärt.mp3",
+      "duration": 90.0,
+      "title": "3-Spiegel im Spiegel - Arvo Pärt",
+      "track_type": "bgm"
+    },
+    {
+      "id": "audio_687112fe",
+      "file_path": "G:/Projects/凌云/4-On the Nature of Daylight-Max Richter、、u0026Louisa Fuller、、u0026Natalia Bonner、、u0026John Metcalfe、、u0026Philip Sheppard、、u0026Chris Worsey.mp3",
+      "duration": 90.0,
+      "title": "4-On the Nature of Daylight-Max Richter、、u0026Louisa Fuller、、u0026Natalia Bonner、、u0026John Metcalfe、、u0026Philip Sheppard、、u0026Chris Worsey",
+      "track_type": "bgm"
+    },
+    {
+      "id": "audio_2f44568f",
+      "file_path": "G:/Projects/凌云/5-Cello Suite No. 1 in G Major, BWV 1007 - I. Prélude (G大调第1号大提琴组曲，作品1007 - 第1首 前奏曲)-杜普蕾.mp3",
+      "duration": 40.0,
+      "title": "5-Cello Suite No. 1 in G Major, BWV 1007 - I. Prélude (G大调第1号大提琴组曲，作品1007 - 第1首 前奏曲)-杜普蕾",
+      "track_type": "bgm"
+    },
+    {
+      "id": "audio_6ab758d6",
+      "file_path": "G:/Projects/凌云/[油管搬运]五十五天在北京丨义和团版(原作者重新制作).mp3",
+      "duration": 0.0,
+      "title": "[油管搬运]五十五天在北京丨义和团版(原作者重新制作)",
+      "track_type": "bgm"
+    }
+  ]
+}

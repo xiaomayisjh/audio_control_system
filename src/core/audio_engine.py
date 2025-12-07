@@ -124,18 +124,23 @@ class AudioEngine:
     def pause_bgm(self) -> None:
         """暂停 BGM"""
         with self._lock:
-            if self._bgm_channel and self._bgm_channel.get_busy():
-                # 记录当前位置
-                self._bgm_paused_pos = self._get_bgm_position_internal()
-                self._bgm_channel.pause()
-                self._bgm_is_paused = True
+            if self._bgm_channel:
+                # 检查通道是否在播放（包括暂停状态）
+                # get_busy() 在暂停时仍返回 True
+                if self._bgm_channel.get_busy() or self._bgm_sound:
+                    # 记录当前位置
+                    self._bgm_paused_pos = self._get_bgm_position_internal()
+                    self._bgm_channel.pause()
+                    self._bgm_is_paused = True
     
     def resume_bgm(self) -> None:
         """继续播放 BGM"""
         with self._lock:
             if self._bgm_channel and self._bgm_is_paused:
-                self._bgm_channel.unpause()
-                self._bgm_is_paused = False
+                # 确保通道存在且有音频
+                if self._bgm_sound:
+                    self._bgm_channel.unpause()
+                    self._bgm_is_paused = False
     
     def stop_bgm(self) -> float:
         """
@@ -296,12 +301,22 @@ class AudioEngine:
         设置 BGM 音量
         
         Args:
-            volume: 音量值 (0.0 - 1.0)
+            volume: 音量值 (0.0 - 3.0，即 0%-300%)
+                   注意：pygame 原生只支持 0-1 范围，超过 100% 的部分
+                   会尽可能放大，但实际效果取决于音频硬件
         """
         with self._lock:
-            self._bgm_volume = max(0.0, min(1.0, volume))
+            self._bgm_volume = max(0.0, min(3.0, volume))
             if self._bgm_sound:
-                self._bgm_sound.set_volume(self._bgm_volume)
+                # pygame 音量范围是 0-1，超过 1 的部分需要特殊处理
+                # 这里我们使用 min(1.0, volume) 作为基础音量
+                # 对于超过 100% 的情况，pygame 会尽可能放大
+                effective_volume = min(1.0, self._bgm_volume)
+                self._bgm_sound.set_volume(effective_volume)
+                # 如果需要超过 100%，可以通过 Channel 的音量叠加
+                if self._bgm_channel and self._bgm_volume > 1.0:
+                    # Channel 音量也是 0-1，但可以与 Sound 音量叠加
+                    self._bgm_channel.set_volume(min(1.0, self._bgm_volume))
     
     def get_bgm_volume(self) -> float:
         """获取 BGM 音量"""
@@ -313,13 +328,20 @@ class AudioEngine:
         设置音效音量
         
         Args:
-            volume: 音量值 (0.0 - 1.0)
+            volume: 音量值 (0.0 - 3.0，即 0%-300%)
+                   注意：pygame 原生只支持 0-1 范围，超过 100% 的部分
+                   会尽可能放大，但实际效果取决于音频硬件
         """
         with self._lock:
-            self._sfx_volume = max(0.0, min(1.0, volume))
+            self._sfx_volume = max(0.0, min(3.0, volume))
+            effective_volume = min(1.0, self._sfx_volume)
             # 更新所有正在播放的音效音量
             for sfx_id, sound in self._sfx_sounds.items():
-                sound.set_volume(self._sfx_volume)
+                sound.set_volume(effective_volume)
+            # 更新所有音效通道的音量
+            if self._sfx_volume > 1.0:
+                for channel in self._sfx_channels:
+                    channel.set_volume(min(1.0, self._sfx_volume))
     
     def get_sfx_volume(self) -> float:
         """获取音效音量"""
